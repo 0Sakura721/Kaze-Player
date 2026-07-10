@@ -12,39 +12,55 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.kaze.player.data.settings.UserPreferencesRepository
 import com.kaze.player.player.PlayerManager
 import com.kaze.player.ui.components.MiniPlayer
 import com.kaze.player.ui.screens.AlbumDetailScreen
 import com.kaze.player.ui.screens.AlbumsScreen
 import com.kaze.player.ui.screens.ArtistDetailScreen
 import com.kaze.player.ui.screens.ArtistsScreen
+import com.kaze.player.ui.screens.FavoritesScreen
 import com.kaze.player.ui.screens.HomeScreen
 import com.kaze.player.ui.screens.PlayerScreen
 import com.kaze.player.ui.screens.QueueScreen
 import com.kaze.player.ui.screens.SearchScreen
 import com.kaze.player.ui.screens.SettingsScreen
 import com.kaze.player.ui.screens.SongsScreen
+import com.kaze.player.ui.theme.KazePlayerTheme
+import com.kaze.player.ui.theme.ThemeMode
 import com.kaze.player.viewmodel.LibraryViewModel
 import com.kaze.player.viewmodel.PlayerViewModel
+import com.kaze.player.viewmodel.SettingsViewModel
 
 @Composable
 fun KazeApp() {
     val navController = rememberNavController()
     val context = LocalContext.current
+
     val playerManager = remember { PlayerManager(context.applicationContext) }
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModel.factory(context.applicationContext as android.app.Application)
     )
     val playerViewModel: PlayerViewModel = viewModel(factory = PlayerViewModel.factory(playerManager))
 
+    val settingsRepo = remember { UserPreferencesRepository(context.applicationContext) }
+    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(settingsRepo))
+    val prefs by settingsViewModel.preferences.collectAsStateWithLifecycle()
+
+    val themeMode = runCatching { ThemeMode.valueOf(prefs.themeMode.uppercase()) }
+        .getOrDefault(ThemeMode.SYSTEM)
+
     androidx.compose.runtime.LaunchedEffect(Unit) {
+        playerManager.defaultSpeed = prefs.defaultSpeed
         playerManager.connect()
     }
 
@@ -54,108 +70,119 @@ fun KazeApp() {
         }
     }
 
-    Scaffold { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            NavHost(
-                navController = navController,
-                startDestination = Screen.Home,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                composable<Screen.Home> {
-                    HomeScreen(
-                        libraryViewModel = libraryViewModel,
-                        playerViewModel = playerViewModel,
-                        onNavigate = { navController.navigate(it) },
-                        contentPadding = innerPadding
-                    )
+    KazePlayerTheme(themeMode = themeMode, dynamicColor = prefs.dynamicColor) {
+        Scaffold { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize()) {
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.Home,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    composable<Screen.Home> {
+                        HomeScreen(
+                            libraryViewModel = libraryViewModel,
+                            playerViewModel = playerViewModel,
+                            onNavigate = { navController.navigate(it) },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.Songs> {
+                        SongsScreen(
+                            viewModel = libraryViewModel,
+                            playerViewModel = playerViewModel,
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.Albums> {
+                        AlbumsScreen(
+                            viewModel = libraryViewModel,
+                            onAlbumClick = { navController.navigate(Screen.AlbumDetail(it)) },
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.AlbumDetail> { backStackEntry ->
+                        val route = backStackEntry.toRoute<Screen.AlbumDetail>()
+                        AlbumDetailScreen(
+                            albumId = route.albumId,
+                            viewModel = libraryViewModel,
+                            playerViewModel = playerViewModel,
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.Artists> {
+                        ArtistsScreen(
+                            viewModel = libraryViewModel,
+                            onArtistClick = { navController.navigate(Screen.ArtistDetail(it)) },
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.ArtistDetail> { backStackEntry ->
+                        val route = backStackEntry.toRoute<Screen.ArtistDetail>()
+                        ArtistDetailScreen(
+                            artistId = route.artistId,
+                            viewModel = libraryViewModel,
+                            playerViewModel = playerViewModel,
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.Search> {
+                        SearchScreen(
+                            viewModel = libraryViewModel,
+                            playerViewModel = playerViewModel,
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.Player> {
+                        PlayerScreen(
+                            viewModel = playerViewModel,
+                            onBack = { navController.popBackStack() },
+                            onQueue = { navController.navigate(Screen.Queue) },
+                            contentPadding = PaddingValues(0.dp)
+                        )
+                    }
+                    composable<Screen.Queue> {
+                        QueueScreen(
+                            viewModel = playerViewModel,
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.Favorites> {
+                        FavoritesScreen(
+                            viewModel = libraryViewModel,
+                            playerViewModel = playerViewModel,
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.Settings> {
+                        SettingsScreen(
+                            viewModel = settingsViewModel,
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
                 }
-                composable<Screen.Songs> {
-                    SongsScreen(
-                        viewModel = libraryViewModel,
-                        playerViewModel = playerViewModel,
-                        onBack = { navController.popBackStack() },
-                        contentPadding = innerPadding
-                    )
-                }
-                composable<Screen.Albums> {
-                    AlbumsScreen(
-                        viewModel = libraryViewModel,
-                        onAlbumClick = { navController.navigate(Screen.AlbumDetail(it)) },
-                        onBack = { navController.popBackStack() },
-                        contentPadding = innerPadding
-                    )
-                }
-                composable<Screen.AlbumDetail> { backStackEntry ->
-                    val route = backStackEntry.toRoute<Screen.AlbumDetail>()
-                    AlbumDetailScreen(
-                        albumId = route.albumId,
-                        viewModel = libraryViewModel,
-                        playerViewModel = playerViewModel,
-                        onBack = { navController.popBackStack() },
-                        contentPadding = innerPadding
-                    )
-                }
-                composable<Screen.Artists> {
-                    ArtistsScreen(
-                        viewModel = libraryViewModel,
-                        onArtistClick = { navController.navigate(Screen.ArtistDetail(it)) },
-                        onBack = { navController.popBackStack() },
-                        contentPadding = innerPadding
-                    )
-                }
-                composable<Screen.ArtistDetail> { backStackEntry ->
-                    val route = backStackEntry.toRoute<Screen.ArtistDetail>()
-                    ArtistDetailScreen(
-                        artistId = route.artistId,
-                        viewModel = libraryViewModel,
-                        playerViewModel = playerViewModel,
-                        onBack = { navController.popBackStack() },
-                        contentPadding = innerPadding
-                    )
-                }
-                composable<Screen.Search> {
-                    SearchScreen(
-                        viewModel = libraryViewModel,
-                        playerViewModel = playerViewModel,
-                        onBack = { navController.popBackStack() },
-                        contentPadding = innerPadding
-                    )
-                }
-                composable<Screen.Player> {
-                    PlayerScreen(
-                        viewModel = playerViewModel,
-                        onBack = { navController.popBackStack() },
-                        onQueue = { navController.navigate(Screen.Queue) },
-                        contentPadding = PaddingValues(0.dp)
-                    )
-                }
-                composable<Screen.Queue> {
-                    QueueScreen(
-                        viewModel = playerViewModel,
-                        onBack = { navController.popBackStack() },
-                        contentPadding = innerPadding
-                    )
-                }
-                composable<Screen.Settings> {
-                    SettingsScreen(
-                        onBack = { navController.popBackStack() },
-                        contentPadding = innerPadding
-                    )
-                }
-            }
 
-            AnimatedVisibility(
-                visible = playerViewModel.state.value.currentSong != null &&
-                    navController.currentDestination?.route != Screen.Player::class.qualifiedName,
-                enter = slideInVertically { it },
-                exit = slideOutVertically { it },
-                modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
-            ) {
-                MiniPlayer(
-                    playerViewModel = playerViewModel,
-                    onClick = { navController.navigate(Screen.Player) },
-                    modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
-                )
+                AnimatedVisibility(
+                    visible = playerViewModel.state.value.currentSong != null &&
+                        navController.currentDestination?.route != Screen.Player::class.qualifiedName,
+                    enter = slideInVertically { it },
+                    exit = slideOutVertically { it },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    MiniPlayer(
+                        playerViewModel = playerViewModel,
+                        onClick = { navController.navigate(Screen.Player) },
+                        modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
+                    )
+                }
             }
         }
     }

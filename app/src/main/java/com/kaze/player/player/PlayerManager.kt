@@ -2,6 +2,7 @@ package com.kaze.player.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.CountDownTimer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -25,9 +26,16 @@ data class PlayerUiState(
     val duration: Long = 0,
     val queue: List<Song> = emptyList(),
     val shuffleEnabled: Boolean = false,
-    val repeatMode: RepeatMode = RepeatMode.OFF
+    val repeatMode: RepeatMode = RepeatMode.OFF,
+    val playbackSpeed: Float = 1f,
+    val sleepTimerRemainingMs: Long = 0L
 )
 
+/**
+ * Bridges the Media3 [MediaController] with the UI. The active song is resolved by the
+ * media item's id (the song's MediaStore id) rather than its position in the queue, so it
+ * stays correct even when shuffle reorders playback internally.
+ */
 class PlayerManager(private val context: Context) {
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
@@ -36,8 +44,13 @@ class PlayerManager(private val context: Context) {
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
 
-    // Keep a reference to the queue for metadata lookups
-    private var currentQueue: List<Song> = emptyList()
+    // media id (MediaStore song id) -> Song, used to resolve the active item regardless of order.
+    private var songMap: Map<Long, Song> = emptyMap()
+
+    // Default speed applied when the controller connects (comes from user settings).
+    var defaultSpeed: Float = 1f
+
+    private var sleepTimer: CountDownTimer? = null
 
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -58,6 +71,7 @@ class PlayerManager(private val context: Context) {
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
             _state.value = _state.value.copy(shuffleEnabled = shuffleModeEnabled)
+            refreshQueue()
         }
 
         override fun onRepeatModeChanged(repeatMode: Int) {
@@ -81,6 +95,7 @@ class PlayerManager(private val context: Context) {
         controllerFuture?.addListener({
             controller = controllerFuture?.get()
             controller?.addListener(listener)
+            controller?.setPlaybackSpeed(defaultSpeed)
             updateCurrentSong()
             _state.value = _state.value.copy(
                 isPlaying = controller?.isPlaying == true,
@@ -89,27 +104,43 @@ class PlayerManager(private val context: Context) {
                     Player.REPEAT_MODE_ONE -> RepeatMode.ONE
                     Player.REPEAT_MODE_ALL -> RepeatMode.ALL
                     else -> RepeatMode.OFF
-                }
+                },
+                playbackSpeed = controller?.playbackSpeed ?: defaultSpeed
             )
         }, MoreExecutors.directExecutor())
     }
 
     fun disconnect() {
+        cancelSleepTimer()
         controller?.removeListener(listener)
         controller?.release()
         controller = null
         controllerFuture = null
+        songMap = emptyMap()
     }
 
     private fun updateCurrentSong() {
         val ctrl = controller ?: return
-        val index = ctrl.currentMediaItemIndex
-        val song = currentQueue.getOrNull(index)
+        val id = ctrl.currentMediaItem?.mediaId?.toLongOrNull()
+        val song = id?.let { songMap[it] }
         _state.value = _state.value.copy(
             currentSong = song,
-            currentSongIndex = index,
+            currentSongIndex = ctrl.currentMediaItemIndex,
             duration = ctrl.duration.coerceAtLeast(0)
         )
+        refreshQueue()
+    }
+
+    /**
+     * Rebuild the visible queue from the controller's actual item order. This keeps the
+     * queue list and the highlighted index in sync even when shuffle is enabled.
+     */
+    private fun refreshQueue() {
+        val ctrl = controller ?: return
+        val list = (0 until ctrl.mediaItemCount).mapNotNull { i ->
+            ctrl.getMediaItemAt(i).mediaId.toLongOrNull()?.let { songMap[it] }
+        }
+        _state.value = _state.value.copy(queue = list)
     }
 
     fun updatePosition() {
@@ -122,11 +153,11 @@ class PlayerManager(private val context: Context) {
 
     fun playQueue(songs: List<Song>, startIndex: Int = 0) {
         val ctrl = controller ?: return
-        currentQueue = songs
+        songMap = songs.associateBy { it.id }
         ctrl.setMediaItems(songs.map { it.toMediaItem() }, startIndex, 0)
         ctrl.prepare()
         ctrl.play()
-        _state.value = _state.value.copy(queue = songs)
+        refreshQueue()
     }
 
     fun playSongAt(index: Int) {
@@ -165,26 +196,54 @@ class PlayerManager(private val context: Context) {
         }
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        val clamped = speed.coerceIn(0.25f, 2f)
+        controller?.setPlaybackSpeed(clamped)
+        _state.value = _state.value.copy(playbackSpeed = clamped)
+    }
+
+    fun startSleepTimer(minutes: Int) {
+        cancelSleepTimer()
+        if (minutes <= 0) return
+        val total = minutes * 60_000L
+        sleepTimer = object : CountDownTimer(total, 1000) {
+            override fun onTick(remaining: Long) {
+                _state.value = _state.value.copy(sleepTimerRemainingMs = remaining)
+            }
+
+            override fun onFinish() {
+                controller?.pause()
+                _state.value = _state.value.copy(sleepTimerRemainingMs = 0L)
+                sleepTimer = null
+            }
+        }.start()
+        _state.value = _state.value.copy(sleepTimerRemainingMs = total)
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimer?.cancel()
+        sleepTimer = null
+        if (_state.value.sleepTimerRemainingMs != 0L) {
+            _state.value = _state.value.copy(sleepTimerRemainingMs = 0L)
+        }
+    }
+
     fun addToQueue(song: Song) {
         val ctrl = controller ?: return
         ctrl.addMediaItem(song.toMediaItem())
-        currentQueue = currentQueue + song
-        _state.value = _state.value.copy(queue = currentQueue)
+        songMap = songMap + (song.id to song)
+        refreshQueue()
     }
 
     fun moveQueueItem(from: Int, to: Int) {
         val ctrl = controller ?: return
         ctrl.moveMediaItem(from, to)
-        currentQueue = currentQueue.toMutableList().apply {
-            add(to, removeAt(from))
-        }
-        _state.value = _state.value.copy(queue = currentQueue)
+        refreshQueue()
     }
 
     fun removeQueueItem(index: Int) {
         val ctrl = controller ?: return
         ctrl.removeMediaItem(index)
-        currentQueue = currentQueue.toMutableList().apply { removeAt(index) }
-        _state.value = _state.value.copy(queue = currentQueue)
+        refreshQueue()
     }
 }

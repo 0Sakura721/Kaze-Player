@@ -1,8 +1,5 @@
 package com.kaze.player.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,10 +26,14 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -42,11 +43,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,6 +61,9 @@ import com.kaze.player.util.formatDuration
 import com.kaze.player.viewmodel.PlayerViewModel
 import java.io.File
 
+private val SPEED_OPTIONS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+private val SLEEP_OPTIONS = listOf(15, 30, 45, 60, 90)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
@@ -69,6 +74,8 @@ fun PlayerScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val song = state.currentSong
+
+    var showTimerMenu by remember { mutableStateOf(false) }
 
     // Load lyrics
     val lyrics = remember(song?.data) {
@@ -195,6 +202,60 @@ fun PlayerScreen(
             } else {
                 Spacer(modifier = Modifier.weight(1f))
             }
+
+            // Speed + sleep timer row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(onClick = {
+                    val idx = SPEED_OPTIONS.indexOf(state.playbackSpeed)
+                    val next = SPEED_OPTIONS[(if (idx < 0) 0 else idx + 1) % SPEED_OPTIONS.size]
+                    viewModel.setPlaybackSpeed(next)
+                }) {
+                    Text("${"%.2f".format(state.playbackSpeed)}x")
+                }
+
+                Box {
+                    OutlinedButton(onClick = { showTimerMenu = true }) {
+                        Icon(
+                            Icons.Filled.Timer,
+                            contentDescription = "Sleep timer",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            if (state.sleepTimerRemainingMs > 0)
+                                formatDuration(state.sleepTimerRemainingMs)
+                            else "Timer"
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showTimerMenu,
+                        onDismissRequest = { showTimerMenu = false }
+                    ) {
+                        SLEEP_OPTIONS.forEach { minutes ->
+                            DropdownMenuItem(
+                                text = { Text("$minutes min") },
+                                onClick = {
+                                    viewModel.startSleepTimer(minutes)
+                                    showTimerMenu = false
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("Off") },
+                            onClick = {
+                                viewModel.cancelSleepTimer()
+                                showTimerMenu = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Progress bar
             Slider(
