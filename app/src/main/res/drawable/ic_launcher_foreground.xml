@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Wind/music note hybrid icon -->
+    <group
+        android:scaleX="0.6"
+        android:scaleY="0.6"
+        android:pivotX="54"
+        android:pivotY="54">
+
+        <!-- Music note body -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M62,34 L62,62 C62,68.6 56.6,74 50,74 C43.4,74 38,68.6 38,62 C38,55.4 43.4,50 50,50 C52.2,50 54.3,50.6 56,51.7 L56,30 L72,26 L72,34 L62,34 Z"/>
+
+        <!-- Wind lines -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M76,44 C82,44 86,46 88,48 L88,52 C86,50 82,48 76,48 C72,48 68,50 68,54 L64,54 C64,48 70,44 76,44 Z"/>
+
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M80,58 C85,58 88,60 88,62 L88,65 C86,64 85,63 80,63 C77,63 75,64 75,66 L71,66 C71,61 75,58 80,58 Z"/>
+    </group>
+</vector>
