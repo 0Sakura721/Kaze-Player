@@ -44,6 +44,10 @@ class PlayerViewModel(
     fun moveQueueItem(from: Int, to: Int) = playerManager.moveQueueItem(from, to)
     fun removeQueueItem(index: Int) = playerManager.removeQueueItem(index)
 
+    fun setPlaybackSpeed(speed: Float) = playerManager.setPlaybackSpeed(speed)
+    fun startSleepTimer(minutes: Int) = playerManager.startSleepTimer(minutes)
+    fun cancelSleepTimer() = playerManager.cancelSleepTimer()
+
     companion object {
         fun factory(playerManager: PlayerManager) = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

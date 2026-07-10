@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -85,6 +86,7 @@ fun HomeScreen(
     val songs by libraryViewModel.songs.collectAsStateWithLifecycle()
     val albums by libraryViewModel.albums.collectAsStateWithLifecycle()
     val artists by libraryViewModel.artists.collectAsStateWithLifecycle()
+    val favorites by libraryViewModel.favorites.collectAsStateWithLifecycle()
     val isScanning by libraryViewModel.isScanning.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -184,6 +186,13 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f),
                         onClick = { onNavigate(Screen.Artists) }
                     )
+                    QuickAccessCard(
+                        icon = Icons.Filled.Favorite,
+                        label = "Favorites",
+                        count = favorites.size,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate(Screen.Favorites) }
+                    )
                 }
             }
 
@@ -203,6 +212,29 @@ fun HomeScreen(
                                 playerViewModel.playQueue(recent, recent.indexOf(song))
                             }
                         )
+                    }
+                }
+            }
+
+            item {
+                if (favorites.isNotEmpty()) {
+                    SectionHeader(title = "Favorites", onMore = { onNavigate(Screen.Favorites) })
+                }
+            }
+            item {
+                if (favorites.isNotEmpty()) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(favorites.take(10)) { song ->
+                            RecentlyAddedItem(
+                                song = song,
+                                onClick = {
+                                    playerViewModel.playQueue(favorites, favorites.indexOf(song))
+                                }
+                            )
+                        }
                     }
                 }
             }

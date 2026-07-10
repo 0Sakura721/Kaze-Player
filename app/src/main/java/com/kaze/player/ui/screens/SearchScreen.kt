@@ -43,6 +43,7 @@ fun SearchScreen(
 ) {
     var query by remember { mutableStateOf("") }
     val playerState by playerViewModel.state.collectAsStateWithLifecycle()
+    val favIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
     val results = remember(query) {
         if (query.length >= 2) viewModel.search(query) else emptyList()
     }
@@ -117,10 +118,12 @@ fun SearchScreen(
                 SongItem(
                     song = song,
                     isPlaying = playerState.currentSong?.id == song.id && playerState.isPlaying,
+                    isFavorite = favIds.contains(song.id),
                     onClick = {
                         playerViewModel.playQueue(results, results.indexOf(song))
                     },
-                    onMoreClick = { playerViewModel.addToQueue(song) }
+                    onMoreClick = { playerViewModel.addToQueue(song) },
+                    onToggleFavorite = { viewModel.toggleFavorite(song.id) }
                 )
             }
         }

@@ -11,7 +11,11 @@ Kaze Player is a lightweight Android music player focused on clean design, relia
 - **Search** — Quick search across your entire library
 - **Now Playing** — Full-screen player with album art and progress
 - **Queue management** — View and reorder your playback queue
-- **Shuffle & Repeat** — Standard playback modes
+- **Shuffle & Repeat** — Standard playback modes (shuffle now resolves tracks by id, so the "now playing" highlight stays correct while shuffling)
+- **Playback speed** — 0.5x–2x, with a default speed saved in settings
+- **Sleep timer** — Auto-pause after 15/30/45/60/90 minutes
+- **Favorites** — Tap the heart on any song; saved list with its own screen and home shortcut
+- **Real settings** — Dynamic color, theme mode (System / Light / Dark / Black), and default speed — all persisted via DataStore
 - **Background playback** — Media3 MediaSessionService for notification controls
 - **Lyrics** — LRC format lyrics support (auto-loaded from adjacent .lrc files)
 - **Material 3** — Dynamic color support with Material You
@@ -30,6 +34,7 @@ Kaze Player is a lightweight Android music player focused on clean design, relia
 | Min SDK | 26 (Android 8.0) |
 | Target SDK | 36 (Android 16) |
 | ABIs | armeabi-v7a, arm64-v8a |
+| APK size | < 10 MB (release, R8 shrunk + resource shrinker) |
 
 ## Getting Started
 

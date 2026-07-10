@@ -49,6 +49,7 @@ fun AlbumDetailScreen(
 ) {
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val playerState by playerViewModel.state.collectAsStateWithLifecycle()
+    val favIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
 
     val album = albums.find { it.id == albumId }
     val songs = remember(albumId, viewModel.songs.value) { viewModel.getSongsByAlbum(albumId) }
@@ -121,8 +122,10 @@ fun AlbumDetailScreen(
                     song = song,
                     index = index,
                     isPlaying = playerState.currentSong?.id == song.id && playerState.isPlaying,
+                    isFavorite = favIds.contains(song.id),
                     onClick = { playerViewModel.playQueue(songs, index) },
-                    onMoreClick = { playerViewModel.addToQueue(song) }
+                    onMoreClick = { playerViewModel.addToQueue(song) },
+                    onToggleFavorite = { viewModel.toggleFavorite(song.id) }
                 )
             }
         }

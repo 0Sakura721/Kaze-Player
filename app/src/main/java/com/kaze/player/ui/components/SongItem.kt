@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -28,8 +30,10 @@ fun SongItem(
     song: Song,
     index: Int? = null,
     isPlaying: Boolean = false,
+    isFavorite: Boolean = false,
     onClick: () -> Unit,
     onMoreClick: (() -> Unit)? = null,
+    onToggleFavorite: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -80,6 +84,17 @@ fun SongItem(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        if (onToggleFavorite != null) {
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = "Favorite",
+                    tint = if (isFavorite) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
 
         if (onMoreClick != null) {
             IconButton(onClick = onMoreClick) {
