@@ -235,6 +235,17 @@ class PlayerManager(private val context: Context) {
         refreshQueue()
     }
 
+    /**
+     * Insert [song] immediately after the currently playing item, so it plays next.
+     */
+    fun playNext(song: Song) {
+        val ctrl = controller ?: return
+        val index = ctrl.currentMediaItemIndex
+        ctrl.addMediaItem(index + 1, song.toMediaItem())
+        songMap = songMap + (song.id to song)
+        refreshQueue()
+    }
+
     fun moveQueueItem(from: Int, to: Int) {
         val ctrl = controller ?: return
         ctrl.moveMediaItem(from, to)

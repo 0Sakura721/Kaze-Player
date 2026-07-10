@@ -146,7 +146,7 @@ fun SettingsScreen(
             )
             Text(text = "Kaze Player", style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = "Version 1.1.0",
+                text = "Version 1.2.0",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -26,15 +26,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kaze.player.data.model.Song
 import com.kaze.player.ui.components.AlbumArt
 import com.kaze.player.ui.components.SongItem
+import com.kaze.player.ui.components.SongOptionsSheet
 import com.kaze.player.viewmodel.LibraryViewModel
 import com.kaze.player.viewmodel.PlayerViewModel
 
@@ -53,6 +57,7 @@ fun AlbumDetailScreen(
 
     val album = albums.find { it.id == albumId }
     val songs = remember(albumId, viewModel.songs.value) { viewModel.getSongsByAlbum(albumId) }
+    var sheetSong by remember { mutableStateOf<Song?>(null) }
 
     Scaffold(
         topBar = {
@@ -124,10 +129,17 @@ fun AlbumDetailScreen(
                     isPlaying = playerState.currentSong?.id == song.id && playerState.isPlaying,
                     isFavorite = favIds.contains(song.id),
                     onClick = { playerViewModel.playQueue(songs, index) },
-                    onMoreClick = { playerViewModel.addToQueue(song) },
+                    onMoreClick = { sheetSong = song },
                     onToggleFavorite = { viewModel.toggleFavorite(song.id) }
                 )
             }
         }
     }
+
+    SongOptionsSheet(
+        song = sheetSong,
+        playerViewModel = playerViewModel,
+        libraryViewModel = viewModel,
+        onDismiss = { sheetSong = null }
+    )
 }

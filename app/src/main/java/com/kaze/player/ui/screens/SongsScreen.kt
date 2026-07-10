@@ -16,9 +16,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kaze.player.data.model.Song
 import com.kaze.player.ui.components.SongItem
+import com.kaze.player.ui.components.SongOptionsSheet
 import com.kaze.player.viewmodel.LibraryViewModel
 import com.kaze.player.viewmodel.PlayerViewModel
 
@@ -33,6 +38,7 @@ fun SongsScreen(
     val songs by viewModel.songs.collectAsStateWithLifecycle()
     val playerState by playerViewModel.state.collectAsStateWithLifecycle()
     val favIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    var sheetSong by remember { mutableStateOf<Song?>(null) }
 
     Scaffold(
         topBar = {
@@ -63,7 +69,7 @@ fun SongsScreen(
                         playerViewModel.playQueue(songs, index)
                     },
                     onMoreClick = {
-                        playerViewModel.addToQueue(song)
+                        sheetSong = song
                     },
                     onToggleFavorite = {
                         viewModel.toggleFavorite(song.id)
@@ -72,4 +78,11 @@ fun SongsScreen(
             }
         }
     }
+
+    SongOptionsSheet(
+        song = sheetSong,
+        playerViewModel = playerViewModel,
+        libraryViewModel = viewModel,
+        onDismiss = { sheetSong = null }
+    )
 }

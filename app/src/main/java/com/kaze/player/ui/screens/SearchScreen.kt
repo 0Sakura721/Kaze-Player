@@ -29,7 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kaze.player.data.model.Song
 import com.kaze.player.ui.components.SongItem
+import com.kaze.player.ui.components.SongOptionsSheet
 import com.kaze.player.viewmodel.LibraryViewModel
 import com.kaze.player.viewmodel.PlayerViewModel
 
@@ -47,6 +49,7 @@ fun SearchScreen(
     val results = remember(query) {
         if (query.length >= 2) viewModel.search(query) else emptyList()
     }
+    var sheetSong by remember { mutableStateOf<Song?>(null) }
 
     Scaffold(
         topBar = {
@@ -122,10 +125,17 @@ fun SearchScreen(
                     onClick = {
                         playerViewModel.playQueue(results, results.indexOf(song))
                     },
-                    onMoreClick = { playerViewModel.addToQueue(song) },
+                    onMoreClick = { sheetSong = song },
                     onToggleFavorite = { viewModel.toggleFavorite(song.id) }
                 )
             }
         }
     }
+
+    SongOptionsSheet(
+        song = sheetSong,
+        playerViewModel = playerViewModel,
+        libraryViewModel = viewModel,
+        onDismiss = { sheetSong = null }
+    )
 }
