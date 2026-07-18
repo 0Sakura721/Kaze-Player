@@ -24,17 +24,9 @@ jobs:
       - name: Install Android SDK platform 36
         run: |
           SDK=/usr/local/lib/android/sdk
-          if [ -d "$SDK" ]; then
-            echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
-            echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
-            ls "$SDK/platforms/" 2>/dev/null
-            yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install 'platforms;android-36' 'build-tools;36.0.0'
-          fi
-          SDK2=/usr/lib/android-sdk
-          if [ -d "$SDK2" ]; then
-            echo "ANDROID_HOME=$SDK2" >> $GITHUB_ENV
-            echo "ANDROID_SDK_ROOT=$SDK2" >> $GITHUB_ENV
-          fi
+          echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install 'platforms;android-36' 'build-tools;36.0.0'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -43,23 +35,28 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build debug APK
-        shell: bash
         run: |
-          set -o pipefail
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
+          ./gradlew assembleDebug --no-daemon 2>&1 | tee gradle_output.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Show Gradle output (first 20 lines)
+        if: failure()
+        run: head -20 gradle_output.txt
+
+      - name: Show Gradle output (last 50 lines)
+        if: failure()
+        run: tail -50 gradle_output.txt
 
       - name: Build release APK (if keystore configured)
-        if: always()
-        shell: bash
+        if: success()
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] && [ -n "${{ secrets.KEY_ALIAS }}" ] && [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
-            set -o pipefail
             ./gradlew assembleRelease --no-daemon \
               -Pandroid.injected.signing.store.file=$(pwd)/keystore.jks \
               -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
               -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-              -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }} 2>&1 | tail -50
+              -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
           else
             echo "No keystore configured, skipping release build"
           fi
@@ -72,15 +69,7 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload release APK (if exists)
-        if: always()
-        shell: bash
-        run: |
-          if ls app/build/outputs/apk/release/*.apk 2>/dev/null; then
-            echo "found_release=true" >> $GITHUB_ENV
-          fi
-
-      - name: Upload release APK
-        if: env.found_release == 'true'
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: kaze-player-release-apk
