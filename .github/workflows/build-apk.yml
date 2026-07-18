@@ -40,6 +40,16 @@ jobs:
           ./gradlew assembleDebug --no-daemon 2>&1 | tee gradle_output.txt
           exit ${PIPESTATUS[0]}
 
+      - name: List APK outputs
+        if: always()
+        run: |
+          echo "=== APK outputs ==="
+          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+          echo "=== build dir ==="
+          ls -la app/build/outputs/ 2>/dev/null || echo "No outputs dir"
+          ls -la app/build/outputs/apk/ 2>/dev/null || echo "No apk dir"
+          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "No debug dir"
+
       - name: Upload Gradle log (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
