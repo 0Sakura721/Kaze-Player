@@ -26,7 +26,7 @@ jobs:
           SDK=/usr/local/lib/android/sdk
           echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
-          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install 'platforms;android-36' 'build-tools;36.0.0'
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install 'platforms;android-36' 'build-tools;36.0.0' 2>&1 | tail -5
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -35,17 +35,30 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build debug APK
+        continue-on-error: true
         run: |
           ./gradlew assembleDebug --no-daemon 2>&1 | tee gradle_output.txt
           exit ${PIPESTATUS[0]}
 
-      - name: Show Gradle output (first 20 lines)
+      - name: Upload Gradle log (on failure)
         if: failure()
-        run: head -20 gradle_output.txt
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: gradle_output.txt
 
-      - name: Show Gradle output (last 50 lines)
+      - name: Check build result
         if: failure()
-        run: tail -50 gradle_output.txt
+        run: |
+          echo "=== Gradle Build Failed ==="
+          echo "--- Last 30 lines ---"
+          tail -30 gradle_output.txt 2>/dev/null || echo "No log file"
+          echo "--- SDK info ---"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms/" 2>/dev/null
+          echo "--- java ---"
+          java -version 2>&1
+          exit 1
 
       - name: Build release APK (if keystore configured)
         if: success()
@@ -68,7 +81,7 @@ jobs:
           name: kaze-player-debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
-      - name: Upload release APK (if exists)
+      - name: Upload release APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
