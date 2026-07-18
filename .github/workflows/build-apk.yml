@@ -21,18 +21,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Debug SDK
+      - name: Install Android SDK platform 36
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          for sdk in /usr/local/lib/android/sdk /opt/android-sdk /usr/lib/android-sdk ~/android-sdk; do
-            if [ -d "$sdk" ]; then
-              echo "=== $sdk ==="
-              ls "$sdk/platforms/" 2>/dev/null
-              ls "$sdk/build-tools/" 2>/dev/null
-              ls "$sdk/cmdline-tools/" 2>/dev/null
-            fi
-          done
+          SDK=/usr/local/lib/android/sdk
+          if [ -d "$SDK" ]; then
+            echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
+            echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
+            ls "$SDK/platforms/" 2>/dev/null
+            yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install 'platforms;android-36' 'build-tools;36.0.0'
+          fi
+          SDK2=/usr/lib/android-sdk
+          if [ -d "$SDK2" ]; then
+            echo "ANDROID_HOME=$SDK2" >> $GITHUB_ENV
+            echo "ANDROID_SDK_ROOT=$SDK2" >> $GITHUB_ENV
+          fi
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
