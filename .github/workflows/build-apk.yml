@@ -21,38 +21,58 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
       - name: Install Android SDK platform 36
         run: |
           SDK=/usr/local/lib/android/sdk
           echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
-          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install 'platforms;android-36' 2>&1 | tail -5
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install 'platforms;android-36' 'build-tools;36.0.0' 2>&1 | tail -5
 
-      - name: Build debug APK (save log)
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build debug APK
         continue-on-error: true
         run: |
           ./gradlew assembleDebug --no-daemon 2>&1 | tee gradle_output.txt
-          echo "gradle_exit_code=${PIPESTATUS[0]}" >> $GITHUB_ENV
+          exit ${PIPESTATUS[0]}
 
-      - name: Show log tail
-        run: tail -80 gradle_output.txt 2>/dev/null || echo "no log"
-
-      - name: Upload Gradle log
-        if: always()
+      - name: Upload Gradle log (on failure)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: gradle-build-log
           path: gradle_output.txt
 
-      - name: Fail if build failed
-        if: env.gradle_exit_code != '0'
-        run: exit 1
+      - name: Check build result
+        if: failure()
+        run: |
+          echo "=== Gradle Build Failed ==="
+          echo "--- Last 30 lines ---"
+          tail -30 gradle_output.txt 2>/dev/null || echo "No log file"
+          echo "--- SDK info ---"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms/" 2>/dev/null
+          echo "--- java ---"
+          java -version 2>&1
+          exit 1
+
+      - name: Build release APK (if keystore configured)
+        if: success()
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] && [ -n "${{ secrets.KEY_ALIAS }}" ] && [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+            ./gradlew assembleRelease --no-daemon \
+              -Pandroid.injected.signing.store.file=$(pwd)/keystore.jks \
+              -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+              -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+              -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+          else
+            echo "No keystore configured, skipping release build"
+          fi
 
       - name: Upload debug APK
         if: always()
@@ -60,3 +80,10 @@ jobs:
         with:
           name: kaze-player-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload release APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaze-player-release-apk
+          path: app/build/outputs/apk/release/*.apk
