@@ -21,8 +21,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Decode keystore (only if secrets exist)
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
@@ -32,7 +35,7 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
-      - name: Build release APK
+      - name: Build release APK (signed)
         if: ${{ secrets.KEYSTORE_BASE64 != '' && secrets.KEYSTORE_PASSWORD != '' && secrets.KEY_ALIAS != '' && secrets.KEY_PASSWORD != '' }}
         run: |
           ./gradlew assembleRelease \
@@ -48,7 +51,7 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload release APK
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        if: ${{ secrets.KEYSTORE_BASE64 != '' && secrets.KEYSTORE_PASSWORD != '' && secrets.KEY_ALIAS != '' && secrets.KEY_PASSWORD != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: kaze-player-release-apk
