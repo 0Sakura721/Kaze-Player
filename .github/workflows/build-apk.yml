@@ -35,21 +35,24 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build debug APK (save log)
+        continue-on-error: true
         run: |
           ./gradlew assembleDebug --no-daemon 2>&1 | tee ../gradle_output.txt
-          exit ${PIPESTATUS[0]}
+          echo "gradle_exit_code=${PIPESTATUS[0]}" >> $GITHUB_ENV
 
-      - name: Show Gradle errors
-        if: failure()
-        run: |
-          echo "=== BUILD FAILED ==="
-          echo "--- SDK ---"
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          ls "$ANDROID_HOME/platforms/" 2>/dev/null || echo "no platforms dir"
-          ls "$ANDROID_HOME/build-tools/" 2>/dev/null || echo "no build-tools dir"
-          echo "--- Gradle output (last 80 lines) ---"
-          tail -80 ../gradle_output.txt 2>/dev/null || echo "no log"
-          exit 1
+      - name: Show log tail
+        run: tail -80 ../gradle_output.txt 2>/dev/null || echo "no log"
+
+      - name: Upload Gradle log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: ../gradle_output.txt
+
+      - name: Fail if build failed
+        if: env.gradle_exit_code != '0'
+        run: exit 1
 
       - name: Upload debug APK
         if: always()
