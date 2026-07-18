@@ -36,4 +36,10 @@ sealed class Screen {
 
     @Serializable
     object Favorites : Screen()
+
+    @Serializable
+    object Playlists : Screen()
+
+    @Serializable
+    data class PlaylistDetail(val playlistId: Long) : Screen()
 }

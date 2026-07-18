@@ -15,6 +15,8 @@ Kaze Player is a lightweight Android music player focused on clean design, relia
 - **Playback speed** — 0.5x–2x, with a default speed saved in settings
 - **Sleep timer** — Auto-pause after 15/30/45/60/90 minutes
 - **Favorites** — Tap the heart on any song; saved list with its own screen and home shortcut
+- **User playlists** — Create your own playlists; add any song via its context menu, rename or delete them. Persisted as JSON via DataStore (no database, stays lean)
+- **Song context menu** — Long-press the overflow on any song for *Play next*, *Add to queue*, *Add to playlist*, and favorite toggle (inspired by Salt Player)
 - **Real settings** — Dynamic color, theme mode (System / Light / Dark / Black), and default speed — all persisted via DataStore
 - **Background playback** — Media3 MediaSessionService for notification controls
 - **Lyrics** — LRC format lyrics support (auto-loaded from adjacent .lrc files)
@@ -77,6 +79,8 @@ app/src/main/java/com/kaze/player/
 ├── data/
 │   ├── model/                  # Song, Album, Artist, Playlist
 │   ├── repository/             # MusicRepository (MediaStore scanning)
+│   ├── playlist/               # PlaylistRepository (DataStore + JSON)
+│   ├── favorites/              # FavoritesRepository (DataStore)
 │   └── lyrics/                 # LRC parser
 ├── player/
 │   ├── PlayerService.kt        # Media3 MediaSessionService

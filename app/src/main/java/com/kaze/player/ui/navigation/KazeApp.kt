@@ -31,6 +31,8 @@ import com.kaze.player.ui.screens.ArtistsScreen
 import com.kaze.player.ui.screens.FavoritesScreen
 import com.kaze.player.ui.screens.HomeScreen
 import com.kaze.player.ui.screens.PlayerScreen
+import com.kaze.player.ui.screens.PlaylistDetailScreen
+import com.kaze.player.ui.screens.PlaylistsScreen
 import com.kaze.player.ui.screens.QueueScreen
 import com.kaze.player.ui.screens.SearchScreen
 import com.kaze.player.ui.screens.SettingsScreen
@@ -156,6 +158,25 @@ fun KazeApp() {
                     composable<Screen.Favorites> {
                         FavoritesScreen(
                             viewModel = libraryViewModel,
+                            playerViewModel = playerViewModel,
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.Playlists> {
+                        PlaylistsScreen(
+                            libraryViewModel = libraryViewModel,
+                            playerViewModel = playerViewModel,
+                            onPlaylistClick = { navController.navigate(Screen.PlaylistDetail(it)) },
+                            onBack = { navController.popBackStack() },
+                            contentPadding = innerPadding
+                        )
+                    }
+                    composable<Screen.PlaylistDetail> { backStackEntry ->
+                        val route = backStackEntry.toRoute<Screen.PlaylistDetail>()
+                        PlaylistDetailScreen(
+                            playlistId = route.playlistId,
+                            libraryViewModel = libraryViewModel,
                             playerViewModel = playerViewModel,
                             onBack = { navController.popBackStack() },
                             contentPadding = innerPadding

@@ -1,5 +1,7 @@
 package com.kaze.player.data.model
 
+import kotlinx.serialization.Serializable
+
 data class Album(
     val id: Long,
     val title: String,
@@ -16,6 +18,7 @@ data class Artist(
     val songCount: Int
 )
 
+@Serializable
 data class Playlist(
     val id: Long,
     val name: String,

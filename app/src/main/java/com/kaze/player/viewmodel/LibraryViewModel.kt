@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.kaze.player.data.favorites.FavoritesRepository
 import com.kaze.player.data.model.Album
 import com.kaze.player.data.model.Artist
+import com.kaze.player.data.model.Playlist
 import com.kaze.player.data.model.Song
+import com.kaze.player.data.playlist.PlaylistRepository
 import com.kaze.player.data.repository.MusicRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +20,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = MusicRepository(app)
     private val favoritesRepository = FavoritesRepository(app)
+    private val playlistRepository = PlaylistRepository(app)
 
     val songs: StateFlow<List<Song>> = repository.songs
     val albums: StateFlow<List<Album>> = repository.albums
@@ -31,6 +34,9 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     private val _favorites = MutableStateFlow<List<Song>>(emptyList())
     val favorites: StateFlow<List<Song>> = _favorites.asStateFlow()
 
+    private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
+    val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
+
     init {
         scanLibrary()
         viewModelScope.launch {
@@ -38,6 +44,9 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                 _favoriteIds.value = ids
                 _favorites.value = repository.songs.value.filter { ids.contains(it.id) }
             }
+        }
+        viewModelScope.launch {
+            playlistRepository.playlistsFlow.collect { _playlists.value = it }
         }
     }
 
@@ -54,6 +63,33 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     fun getSongById(id: Long): Song? = repository.getSongById(id)
     fun search(query: String): List<Song> = repository.search(query)
     fun getRecentlyAdded(): List<Song> = repository.getRecentlyAdded()
+
+    /**
+     * Resolve a playlist's stored song ids into [Song] objects, dropping any ids that no
+     * longer exist in the MediaStore library.
+     */
+    fun getSongsForPlaylist(playlist: Playlist): List<Song> =
+        playlist.songIds.mapNotNull { getSongById(it) }
+
+    // ---- Playlist operations ----
+
+    suspend fun createPlaylist(name: String): Playlist = playlistRepository.createPlaylist(name)
+
+    fun deletePlaylist(id: Long) {
+        viewModelScope.launch { playlistRepository.deletePlaylist(id) }
+    }
+
+    fun renamePlaylist(id: Long, newName: String) {
+        viewModelScope.launch { playlistRepository.renamePlaylist(id, newName) }
+    }
+
+    fun addSongToPlaylist(playlistId: Long, songId: Long) {
+        viewModelScope.launch { playlistRepository.addSong(playlistId, songId) }
+    }
+
+    fun removeSongFromPlaylist(playlistId: Long, songId: Long) {
+        viewModelScope.launch { playlistRepository.removeSong(playlistId, songId) }
+    }
 
     fun toggleFavorite(id: Long) {
         viewModelScope.launch { favoritesRepository.toggleFavorite(id) }

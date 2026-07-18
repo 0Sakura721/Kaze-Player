@@ -41,6 +41,7 @@ class PlayerViewModel(
     fun toggleShuffle() = playerManager.toggleShuffle()
     fun cycleRepeatMode() = playerManager.cycleRepeatMode()
     fun addToQueue(song: Song) = playerManager.addToQueue(song)
+    fun playNext(song: Song) = playerManager.playNext(song)
     fun moveQueueItem(from: Int, to: Int) = playerManager.moveQueueItem(from, to)
     fun removeQueueItem(index: Int) = playerManager.removeQueueItem(index)
 
