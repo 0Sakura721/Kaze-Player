@@ -11,7 +11,8 @@ data class Song(
     val data: String,
     val track: Int = 0,
     val dateAdded: Long = 0,
-    val albumArtUri: String? = null
+    val albumArtUri: String? = null,
+    val year: Int = 0
 ) {
     fun toMediaItem(): androidx.media3.common.MediaItem {
         val metadata = androidx.media3.common.MediaMetadata.Builder()

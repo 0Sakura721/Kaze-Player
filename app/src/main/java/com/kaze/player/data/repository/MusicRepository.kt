@@ -95,7 +95,8 @@ class MusicRepository(private val context: Context) {
                         data = cursor.getString(dataCol) ?: "",
                         track = cursor.getInt(trackCol),
                         dateAdded = cursor.getLong(dateAddedCol),
-                        albumArtUri = getAlbumArtUri(albumId)
+                        albumArtUri = getAlbumArtUri(albumId),
+                        year = cursor.getInt(yearCol)
                     )
                 )
             }
@@ -112,7 +113,7 @@ class MusicRepository(private val context: Context) {
                     artist = albumSongs.first().artist,
                     albumArtUri = albumSongs.first().albumArtUri,
                     songCount = albumSongs.size,
-                    year = 0
+                    year = albumSongs.first().year
                 )
             }
             .sortedBy { it.title.lowercase() }

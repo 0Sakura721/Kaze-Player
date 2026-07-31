@@ -212,12 +212,45 @@ class PlayerManager(private val context: Context) {
             }
 
             override fun onFinish() {
-                controller?.pause()
+                fadeOutAndPause()
                 _state.value = _state.value.copy(sleepTimerRemainingMs = 0L)
                 sleepTimer = null
             }
         }.start()
         _state.value = _state.value.copy(sleepTimerRemainingMs = total)
+    }
+
+    /**
+     * Smoothly fades the volume to zero over ~2 seconds, then pauses and restores
+     * the original volume so the next playback starts at full strength again.
+     */
+    private fun fadeOutAndPause() {
+        val ctrl = controller ?: run {
+            _state.value = _state.value.copy(sleepTimerRemainingMs = 0L)
+            return
+        }
+        val startVolume = ctrl.volume.coerceIn(0f, 1f)
+        if (startVolume <= 0f) {
+            ctrl.pause()
+            return
+        }
+
+        val FADE_STEPS = 20
+        val FADE_DURATION_MS = 2000L
+        val stepMs = FADE_DURATION_MS / FADE_STEPS
+        val stepDelta = startVolume / FADE_STEPS
+
+        object : CountDownTimer(FADE_DURATION_MS, stepMs) {
+            override fun onTick(millisUntilFinished: Long) {
+                ctrl.volume = (ctrl.volume - stepDelta).coerceAtLeast(0f)
+            }
+
+            override fun onFinish() {
+                ctrl.volume = 0f
+                ctrl.pause()
+                ctrl.volume = startVolume // restore for next playback
+            }
+        }.start()
     }
 
     fun cancelSleepTimer() {
