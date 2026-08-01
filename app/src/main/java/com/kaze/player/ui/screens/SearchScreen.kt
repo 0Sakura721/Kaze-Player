@@ -68,7 +68,8 @@ fun SearchScreen(
                         },
                         expanded = false,
                         onExpandedChange = { },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        content = { }
                     )
                 },
                 navigationIcon = {

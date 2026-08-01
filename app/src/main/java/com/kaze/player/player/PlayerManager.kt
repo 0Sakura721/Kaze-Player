@@ -105,7 +105,7 @@ class PlayerManager(private val context: Context) {
                     Player.REPEAT_MODE_ALL -> RepeatMode.ALL
                     else -> RepeatMode.OFF
                 },
-                playbackSpeed = controller?.playbackSpeed ?: defaultSpeed
+                playbackSpeed = controller?.playbackParameters?.speed ?: defaultSpeed
             )
         }, MoreExecutors.directExecutor())
     }
